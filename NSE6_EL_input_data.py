@@ -1,4 +1,6 @@
-# imports
+# =============================================================================
+# Imports & initialization
+# =============================================================================
 from esdl import esdl
 from esdl.esdl_handler import EnergySystemHandler
 import pandas as pd
@@ -13,14 +15,34 @@ with open(filename, 'rb') as f:
     variables = pickle.load(f)
 
 esdl_variables = {key: variables[key] for key in ['drop_scenarios', 'asset_parameters']}
-
 globals().update(esdl_variables)
 
-# additional data
-#from OWF_input_data import owf_sold_to_electrolyser_list
-#from ipynb.fs.defs.Operation_analysis_OWF_EL import *  # does not work for some reason...
 
-#type 'yes' to update the variables retrieved from Operation_analysis_OWF_EL.ipynb. Else, the stored variables in the Pickle file will be used. This latter helps to run the program faster
+# =============================================================================
+# Scenario selection
+# =============================================================================
+# Map scenario names to their respective list index
+Scenario_mapping = {
+    "pessimistic": 0,
+    "most_likely": 1,
+    "optimistic": 2
+}
+
+# Determine which scenario is active based on what is NOT dropped
+all_scenarios = {"pessimistic", "most_likely", "optimistic"}
+active_scenario_name = list(all_scenarios - set(drop_scenarios))[0]
+active_index = Scenario_mapping[active_scenario_name]
+
+print(f"Active Scenario: {active_scenario_name} (Index: {active_index})")
+
+# Choose electrolyser size of 100MW or 500MW
+electrolyser_unit_size = '100MW'
+
+# =============================================================================
+# Load operational analysis data
+# =============================================================================
+
+#type 'yes' to update the variables retrieved from Operation_analysis_OWF_EL.ipynb. Else, the stored variables in the Pickle file will be used. The latter helps to run the program faster
 update_operation_analysis = 'no'
 
 if update_operation_analysis == 'yes':
@@ -104,13 +126,11 @@ else:
     storage_costs_2050 = df_2050.iloc[4].tolist()
     H2_sold_2050 = df_2050.iloc[5].tolist()
 
-########## sort input data from operation analysis and put them into lists
-#sorted_row = costs_E_PPA_2030.iloc[0].sort_values()
-# Sort the columns in descending order based on the values in the first row
-#df_sorted = costs_E_PPA_2030[sorted(costs_E_PPA_2030.columns, key=lambda col: costs_E_PPA_2030[col].values[0], reverse=True)].values.tolist()
 
-#print(df_sorted)
-########## Get cost data from Mapeditor
+# =============================================================================
+# Input data - from Mapeditor
+# =============================================================================
+
 
 # el_capex?
 # el_opex?
@@ -118,23 +138,14 @@ else:
 el_general_wacc_list = [0.095, 0.095, 0.07]                             # similar to OnEL
 # el_efficiency = asset_parameters['efficiency']['Electrolyzer']        # decimal, i.e., 60% # use factsheet info for now
 
-########## Cost data from factsheet
+# =============================================================================
+# Input data - from factsheet
+# =============================================================================
 
 # Used factsheet: Electrolysis_PEM_100MW  & Electrolysis_PEM_500MW
 # Date: 22-08-2024
 
 # format: [2030[pes-ml-opt], 2040[pes-ml-opt], 2050[pes-ml-opt]]
-
-#this input data is included in 'Operation_analysis_OWF_EL' already, if you want to overwrite this file, uncomment the input data below
-#electrolyser_capacity = 500                                                     # MW, total electrolyser capacity, i.e., even if we place 100 mw electrolysers the total capacity will always be 500 MW. 
-                                                                                # In the case of 100MW electrolysers, we assume that 5x 100 MW is installed during the construction years. 
-#electricity_grid_capacity = 500                                                # electricity grid capacity of electrolyser in MW
-                                                                                # This might be spread out over multiple years in reality, we could change that in the future.
-#energy_efficiency_hhv = 0.73                                                    # Note this is HHV and within NSE we use LHV. Should be converted. 
-#hhv_h2_kwh_kg = 39.39
-#lhv_h2_kwh_kg = 33.33
-#el_efficiency = energy_efficiency_hhv / hhv_h2_kwh_kg * lhv_h2_kwh_kg           # (LHV)
-#total_energy_consumption = 55.7                                                 # KWh/kgH2
 
 # In factsheet capex is given more detailed: electrolyser + bop + compressor + indirect cost and owner cost + unforseen cost
 
@@ -179,86 +190,97 @@ E_purchased_by_EL_from_PPA_2040 = E_purchased_by_EL_from_PPA_2040.values.flatten
 E_purchased_by_EL_from_PPA_2050 = E_purchased_by_EL_from_PPA_2050.values.flatten().tolist()
 E_purchased_by_EL_from_PPA = [E_purchased_by_EL_from_PPA_2030, E_purchased_by_EL_from_PPA_2040, E_purchased_by_EL_from_PPA_2050]
 
-factsheet_parameters = [electricity_tax, capex_total_100mw, stack_replacement_100mw, opex_100mw, capex_total_500mw, stack_replacement_500mw, opex_500mw, hwi_price, el_electricity_costs_ppa, el_electricity_costs_grid, h2_revenues_hpa, h2_storage_costs, h2_sold_to_hpa, h2_sold_to_hpa_kg, E_purchased_by_EL, E_purchased_by_EL_from_market, E_purchased_by_EL_from_PPA]
-index_names = ['electricity_tax', 'capex_total_100mw', 'stack_replacement_100mw', 'opex_100mw', 'capex_total_500mw', 'stack_replacement_500mw', 'opex_500mw', 'hwi_price', 'el_electricity_costs_ppa', 'el_electricity_costs_grid', 'h2_revenues_hpa', 'h2_storage_costs', 'h2_sold_to_hpa', 'h2_sold_to_hpa_kg', 'E_purchased_by_EL', 'E_purchased_by_EL_from_market', 'E_purchased_by_EL_from_PPA']
 
-df_factsheet_2030 = pd.DataFrame(columns=['pessimistic','most_likely','optimistic'])
-df_factsheet_2040 = pd.DataFrame(columns=['pessimistic','most_likely','optimistic'])
-df_factsheet_2050 = pd.DataFrame(columns=['pessimistic','most_likely','optimistic'])
+# =============================================================================
+# Select active scenario and interpolate to get yearly data
+# =============================================================================
 
-for i,name in enumerate(index_names):
-    df_factsheet_2030.loc[name] = factsheet_parameters[i][0]
+# Define all factsheet data in a dictionary
+# If new parameters are added with format: [2030[pes-ml-opt], 2040[pes-ml-opt], 2050[pes-ml-opt]], they should be added in this dictionary
+raw_factsheet_data = {
+    'electricity_tax': electricity_tax,
+    'capex_total_100mw': capex_total_100mw,
+    'stack_replacement_100mw': stack_replacement_100mw,
+    'opex_100mw': opex_100mw,
+    'capex_total_500mw': capex_total_500mw,
+    'stack_replacement_500mw': stack_replacement_500mw,
+    'opex_500mw': opex_500mw,
+    'hwi_price': hwi_price,
+    'el_electricity_costs_ppa': el_electricity_costs_ppa,
+    'el_electricity_costs_grid': el_electricity_costs_grid,
+    'h2_revenues_hpa': h2_revenues_hpa,
+    'h2_storage_costs': h2_storage_costs,
+    'h2_sold_to_hpa': h2_sold_to_hpa,
+    'h2_sold_to_hpa_kg': h2_sold_to_hpa_kg,
+    'E_purchased_by_EL': E_purchased_by_EL,
+    'E_purchased_by_EL_from_market': E_purchased_by_EL_from_market,
+    'E_purchased_by_EL_from_PPA': E_purchased_by_EL_from_PPA
+}
 
-for i,name in enumerate(index_names):
-    df_factsheet_2040.loc[name] = factsheet_parameters[i][1]
-
-for i,name in enumerate(index_names):
-    df_factsheet_2050.loc[name] = factsheet_parameters[i][2]
-
-df_factsheet_2030.drop(columns=drop_scenarios,axis=1,inplace=True)
-df_factsheet_2040.drop(columns=drop_scenarios,axis=1,inplace=True)
-df_factsheet_2050.drop(columns=drop_scenarios,axis=1,inplace=True)
-
-df_factsheet_2030_2050 = pd.concat([df_factsheet_2030,df_factsheet_2040,df_factsheet_2050], axis=1)
-df_factsheet_2030_2050.columns = ['2030','2040','2050']
-
-
-df_factsheet_2030_2050.style.format(precision=2)
-
-
-########## Transform 2030, 2040, 2050 data from factsheet into yearly data
-
+# Set up a dataframe 
 all_years = range(2027,2100,1)
-df_yearly_data = pd.DataFrame(index=index_names, columns=all_years)
+df_yearly_data = pd.DataFrame(index=raw_factsheet_data.keys(), columns=all_years)
 
-for year in all_years:
-    for name in index_names:
+
+# Loop over the dictionary and interpolate between data points to create values for each year
+for name, data_array in raw_factsheet_data.items():
+
+    # first get the value for the active scenario for each year
+    # data_array[0] = 2030, data_array[1] = 2040, data_array[2]=2050
+    # [active_index] extracts only the chosen pessimistic/most_likely/optimistic value
+    value_2030 = data_array[0][active_index]
+    value_2040 = data_array[1][active_index]
+    value_2050 = data_array[2][active_index]
+
+
+    # Fill in the dataframe year by year
+    for year in all_years:
         if year <= 2030:
-            df_yearly_data.loc[name,year] = df_factsheet_2030_2050.loc[name,'2030']
+            df_yearly_data.loc[name,year] = value_2030
 
-for i, year in enumerate(all_years):
-    for name in index_names:
-        if year >2030 and year < 2040:
-            df_yearly_data.loc[name,year] = (df_factsheet_2030_2050.loc[name,'2030'] + 
-                                          ((df_factsheet_2030_2050.loc[name,'2040'] - 
-                                          df_factsheet_2030_2050.loc[name,'2030']) / 10)*(i-3))
-            
-for i, year in enumerate(all_years):
-    for name in index_names:
-        if year == 2040:
-            df_yearly_data.loc[name,year] = df_factsheet_2030_2050.loc[name,'2040']
-        if year >2040 and year < 2050:
-            df_yearly_data.loc[name,year] = (df_factsheet_2030_2050.loc[name,'2040'] + 
-                                          ((df_factsheet_2030_2050.loc[name,'2050'] - 
-                                          df_factsheet_2030_2050.loc[name,'2040']) / 10)*(i-13))
+        elif 2030 < year < 2040: 
+            # linear interpolation between 2030 and 2040
+            df_yearly_data.loc[name,year] = value_2030 + ((value_2040-value_2030) / 10) * (year - 2030)
 
-for year in all_years:
-    for name in index_names:
-        if year >= 2050:
-            df_yearly_data.loc[name,year] = df_factsheet_2030_2050.loc[name,'2050']
+        elif year == 2040:
+            df_yearly_data.loc[name,year] = value_2040
 
-df_yearly_data.style.format(precision=1)
+        elif 2040 < year < 2050:
+            df_yearly_data.loc[name, year] = value_2040 + ((value_2050-value_2040) / 10)* (year - 2040)
+
+        elif year >= 2050:
+            df_yearly_data.loc[name,year] = value_2050
 
 
-# here we make a df with just the opex numbers, so we can use this for the sensitivity later on
+# print(df_yearly_data)
+
+# =============================================================================
+# Make df for electrolyser sizes
+# =============================================================================
+
+# here we make a df with just the opex numbers, so we can let the model use 100MW or 500MW electrolyser
+
+# Opex 100 MW electrolyser 
 df_el_opex_100mw = pd.DataFrame(columns=all_years)
-df_el_opex_500mw = pd.DataFrame(columns=all_years)
-
-# For 100 MW electrolyser
 df_el_opex_100mw.loc['opex'] = np.array(df_yearly_data.loc['opex_100mw'] * 1000 * electrolyser_capacity / 1E6) # check units from factsheet, probably a mistake in factsheet!
 
-# For 500 MW electrolyser
-df_el_opex_500mw.loc['opex'] = np.array(df_yearly_data.loc['opex_500mw'] * 1000 * electrolyser_capacity / 1E6) # check units from factsheet, probably a mistake in factsheet!
-
-# here we make a df with just stack replacement numbers, so we can use this for the sensitivity later on
+# Stack replacement 100 MW electrolyser
 df_stack_replacement_100mw = pd.DataFrame(columns=all_years)
-df_stack_replacement_500mw = pd.DataFrame(columns=all_years)
-
-# For 100 MW electrolyser
 df_stack_replacement_100mw.loc['stack_replacement'] = np.array(df_yearly_data.loc['stack_replacement_100mw'] * 1000 * electrolyser_capacity / 1E6)
 
-# For 500 MW electrolyser
+# Opex 500 MW electrolyser
+df_el_opex_500mw = pd.DataFrame(columns=all_years)
+df_el_opex_500mw.loc['opex'] = np.array(df_yearly_data.loc['opex_500mw'] * 1000 * electrolyser_capacity / 1E6) # check units from factsheet, probably a mistake in factsheet!
+
+# Stack replacement 500 MW electrolyser
+df_stack_replacement_500mw = pd.DataFrame(columns=all_years)
 df_stack_replacement_500mw.loc['stack_replacement'] = np.array(df_yearly_data.loc['stack_replacement_500mw'] * 1000 * electrolyser_capacity / 1E6)
+
+
+
+# =============================================================================
+# Cashflow revenues and costs
+# =============================================================================
 
 ################ Comment this section if you want to run the BC without the operation analysis file
 el_annual_electricity_costs_ppa = pd.DataFrame(columns=all_years)
@@ -279,7 +301,9 @@ el_electricity_tax.loc['el_electricity_tax'] = np.array(df_yearly_data.loc['elec
 el_fraction_e_from_market.loc['fraction_e_from_market'] = np.array(df_yearly_data.loc['E_purchased_by_EL_from_market']) / np.array(df_yearly_data.loc['E_purchased_by_EL_from_PPA'])    # so this fraction of the electricity input in the electrolyser is not green, and thus that amount of H2 will not be green so won't be able to sell HWI's for this!
 el_hwi_revenues.loc['el_hwi_revenues'] = np.array(df_yearly_data.loc['h2_sold_to_hpa_kg']) * np.array(df_yearly_data.loc['hwi_price']) * np.array(1-el_fraction_e_from_market.loc['fraction_e_from_market']) / 1E6    #MEUR
 
-########## Input data from Excel
+# =============================================================================
+# Input data from Excel
+# =============================================================================
 
 # Data format: [pessimistic, most_likely, optimistic]
 
@@ -315,84 +339,45 @@ el_electricity_grid_connection_tariff_list = [144.3, 144.3, 144.3]      # EUR/kW
 #h2_storage_need_list = [346530.12, 315027.38, 283524.64]    # MWh/yr
 #h2_price_hpa_list = [61.50, 82.00, 102.50]                  # EUR/MWh
 
+# =============================================================================
+# Get active scenario for Excel data
+# =============================================================================
+
+# define all Excel inputs in a dictionary
+# If new inputs are added in format: [pessimistic, most_likely, optimistic], they should be added in this dictionary
+
+raw_cost_inputs = {
+    'el_general_wacc': el_general_wacc_list,
+    'el_lifetime': el_lifetime_list,
+    'duration_construction': duration_construction_list,
+    'duration_operation': duration_operation_list,
+    'duration_decommissioning': duration_decommissioning_list,
+    'tender_year': tender_year_list,
+    'el_income_tax_rate': el_income_tax_rate_list,
+    'el_inflation': el_inflation_list,
+    'el_loan_interest_rate': el_loan_interest_rate_list,
+    'el_length_of_loan': el_length_of_loan_list,
+    'el_depreciation': el_depreciation_list,
+    'el_stack_depreciation': el_stacks_depreciation_list,
+    'el_contingency': el_contingency_list,
+    'el_loan_percentage': el_loan_percentage_list,
+    'el_decommissioning_percentage': el_decommissioning_percentage_list,
+    'el_electricity_grid_connection_tariff': el_electricity_grid_connection_tariff_list
+}
 
 
-# Construct a dataframe with the input from above
-df_cost_data = pd.DataFrame(columns=['pessimistic','most_likely','optimistic'])
+# Extract active index values into a clean temporary dictionary
+cost_data_active = {name: data_list[active_index] for name, data_list in raw_cost_inputs.items()}
 
-df_cost_data.loc['el_general_wacc'] = el_general_wacc_list
-df_cost_data.loc['el_lifetime'] = el_lifetime_list
-df_cost_data.loc['duration_construction'] = duration_construction_list
-df_cost_data.loc['duration_operation'] = duration_operation_list
-df_cost_data.loc['duration_decommissioning'] = duration_decommissioning_list
-df_cost_data.loc['tender_year'] = tender_year_list
-
-df_cost_data.loc['income_tax_rate'] = el_income_tax_rate_list
-df_cost_data.loc['inflation'] = el_inflation_list
-df_cost_data.loc['loan_interest_rate'] = el_loan_interest_rate_list
-df_cost_data.loc['length_of_loan'] = el_length_of_loan_list
-df_cost_data.loc['el_depreciation'] = el_depreciation_list
-df_cost_data.loc['stack_depreciation'] = el_stacks_depreciation_list
-
-df_cost_data.loc['contingency'] = el_contingency_list
-df_cost_data.loc['loan_percentage'] = el_loan_percentage_list
-df_cost_data.loc['decommissioning_percentage'] = el_decommissioning_percentage_list
-df_cost_data.loc['electricity_grid_connection_tariff'] = el_electricity_grid_connection_tariff_list
-
-#uncomment the lines below to get the file working without the operational analysis file
-#df_cost_data.loc['ppa_price_electricity'] = ppa_price_electricity_list
-#df_cost_data.loc['grid_price_electricity'] = grid_price_electricity_list
-#df_cost_data.loc['purchased_from_ppa'] = purchased_from_ppa_list
-#df_cost_data.loc['purchased_from_grid'] = purchased_from_grid_list
-#df_cost_data.loc['h2_storage_tariff'] = h2_storage_tariff_list
-#df_cost_data.loc['h2_storage_need'] = h2_storage_need_list
-#df_cost_data.loc['h2_price_hpa'] = h2_price_hpa_list
+# Automatically unpack all keys as standalone variables
+globals().update(cost_data_active)
 
 
-df_cost_data
 
+# =============================================================================
+# Calculate cost data
+# =============================================================================
 
-# the scenario is chosen, by dropping the other two scenario's from the dataframe
-
-df_cost_data.drop(columns=drop_scenarios,axis=1,inplace=True)
-df_cost_data.style.format(precision=3)
-
-# get cost data for the correct scenario
-# in the df we can see that we have the most_likely scenario
-# we can get the parameters from the df by using the row index
-# using df_cost_data.loc['parameter'] not only gives the value, but also column name, dtype etc.
-# therefore, we use .item() to get the desired value
-
-el_general_wacc = df_cost_data.loc['el_general_wacc'].item()
-el_lifetime = int(df_cost_data.loc['el_lifetime'].item())
-duration_construction = int(df_cost_data.loc['duration_construction'].item())
-duration_operation = int(df_cost_data.loc['duration_operation'].item())
-duration_decommissioning = int(df_cost_data.loc['duration_decommissioning'].item())
-tender_year = int(df_cost_data.loc['tender_year'].item())
-
-el_income_tax_rate = df_cost_data.loc['income_tax_rate'].item()
-el_inflation = df_cost_data.loc['inflation'].item()                 
-el_loan_interest_rate = df_cost_data.loc['loan_interest_rate'].item()
-el_length_of_loan = int(df_cost_data.loc['length_of_loan'].item())
-el_depreciation = int(df_cost_data.loc['el_depreciation'].item())
-el_stack_depreciation = int(df_cost_data.loc['stack_depreciation'].item())
-
-el_contingency = df_cost_data.loc['contingency'].item()
-el_loan_percentage = df_cost_data.loc['loan_percentage'].item()
-el_decommissioning_percentage = df_cost_data.loc['decommissioning_percentage'].item()
-el_electricity_grid_connection_tariff = df_cost_data.loc['electricity_grid_connection_tariff'].item()
-
-#uncomment these lines to get the file working without Operational analysis file
-#el_ppa_price_electricity = df_cost_data.loc['ppa_price_electricity'].item()
-#el_grid_price_electricity= df_cost_data.loc['grid_price_electricity'].item()
-#el_purchased_from_ppa = df_cost_data.loc['purchased_from_ppa'].item()
-#el_purchased_from_grid = df_cost_data.loc['purchased_from_grid'].item()
-#el_h2_storage_tariff = df_cost_data.loc['h2_storage_tariff'].item()
-#el_h2_stoarge_need = df_cost_data.loc['h2_storage_need'].item()
-#el_h2_price_hpa = df_cost_data.loc['h2_price_hpa'].item()
-
-
-########## Calculate cost data
 el_capex_100mw = df_yearly_data.loc['capex_total_100mw',tender_year] * electrolyser_capacity * 1000 / 1E6
 el_capex_500mw = df_yearly_data.loc['capex_total_500mw',tender_year] * electrolyser_capacity * 1000 / 1E6
 
@@ -423,28 +408,22 @@ el_electricity_grid_connection = el_electricity_grid_connection_tariff * electri
 year_construction_start = tender_year + 1
 construction_years_list = list(range(year_construction_start, year_construction_start + duration_construction))
 
-########## Input variables used for business case EL
-# This is a list of all the input variables used in the business case. 
-# Make sure to always use the same order in functions
-# These are all the factors that we did a sensitivity analysis on in Excel
 
-input_variables_list = ['capex_variable',
-                        'df_opex_variable',
-                        'inflation_variable',
-                        'annual_electricity_costs_ppa_variable',
-                        'annual_electricity_costs_grid_variable',
-                        'electricity_grid_connection_variable',
-                        'h2_storage_costs_variable',
-                        'df_stack_replacement_costs_variable',
-                        'hydrogen_revenues_variable',                        
-                        'hwi_revenues_variable',                        
-                        'decommissioning_variable',
-                        'loan_percentage_variable',
-                        'loan_interest_rate_variable',
-                        'income_tax_rate_variable',
-                        'wacc_variable',
-                        #'duration_operation_variable',
-                        'lifetime_investment_variable']
+
+# Choose the relevant numbers based on electrolyser size configuration
+if electrolyser_unit_size == '100MW':
+    el_capex = el_capex_100mw
+    df_el_opex = df_el_opex_100mw
+    df_stack_replacement = df_stack_replacement_100mw
+    el_loan = el_loan_100mw
+    el_annuity_loan = el_annuity_loan_100mw
+
+else: 
+    el_capex = el_capex_500mw
+    df_el_opex = df_el_opex_500mw
+    df_stack_replacement = df_stack_replacement_500mw
+    el_loan = el_loan_500mw
+    el_annuity_loan = el_annuity_loan_500mw
 
 
 # =============================================================================
@@ -465,13 +444,13 @@ el_parameters = {
     "inflation": el_inflation,
     "loan_interest_rate": el_loan_interest_rate,
     "loan_percentage": el_loan_percentage,
-    "decommissioning": el_decommissioning_percentage_list, # Note: if this is a percentage, we can rename it later to percentage
+    "decommissioning_percentage": el_decommissioning_percentage, 
     
     # Capital & Operational Expenditures (CAPEX / OPEX)
-    "capex": el_capex_100mw,             # Or el_capex_500mw depending on configuration
-    "opex_df": df_el_opex_100mw,         # Dataframe with yearly opex values
+    "capex": el_capex,             # Or el_capex_500mw depending on configuration
+    "opex_df": df_el_opex,         # Dataframe with yearly opex values
     "electricity_grid_connection": el_electricity_grid_connection,
-    "stack_replacement_costs": df_stack_replacement_100mw, # Dataframe with yearly stack replacement
+    "df_stack_replacement_costs": df_stack_replacement, # Dataframe with yearly stack replacement
     
     # Technology Specific: Annual Cost and Revenue Dataframes
     "annual_electricity_costs_ppa": el_annual_electricity_costs_ppa,

@@ -37,7 +37,7 @@ def construct_operations_years_list(lifetime_investment_variable):
     
     return operations_years_list
 
-def construct_decomissioning_years_list(lifetime_investment_variable):
+def construct_decommissioning_years_list(lifetime_investment_variable):
 
     year_construction_start = tender_year + 1
     year_start_operation = year_construction_start + duration_construction
@@ -45,4 +45,4 @@ def construct_decomissioning_years_list(lifetime_investment_variable):
 
     decomissioning_years_list = list(range(year_decommissioning_start, year_decommissioning_start + duration_decommissioning))
 
-    return decomissioning_years_list
+    return decommissioning_years_list
