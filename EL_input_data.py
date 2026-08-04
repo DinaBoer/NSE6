@@ -423,28 +423,6 @@ el_electricity_grid_connection = el_electricity_grid_connection_tariff * electri
 year_construction_start = tender_year + 1
 construction_years_list = list(range(year_construction_start, year_construction_start + duration_construction))
 
-########## Input variables used for business case EL
-# This is a list of all the input variables used in the business case. 
-# Make sure to always use the same order in functions
-# These are all the factors that we did a sensitivity analysis on in Excel
-
-input_variables_list = ['capex_variable',
-                        'df_opex_variable',
-                        'inflation_variable',
-                        'annual_electricity_costs_ppa_variable',
-                        'annual_electricity_costs_grid_variable',
-                        'electricity_grid_connection_variable',
-                        'h2_storage_costs_variable',
-                        'df_stack_replacement_costs_variable',
-                        'hydrogen_revenues_variable',                        
-                        'hwi_revenues_variable',                        
-                        'decommissioning_variable',
-                        'loan_percentage_variable',
-                        'loan_interest_rate_variable',
-                        'income_tax_rate_variable',
-                        'wacc_variable',
-                        #'duration_operation_variable',
-                        'lifetime_investment_variable']
 
 
 # =============================================================================
