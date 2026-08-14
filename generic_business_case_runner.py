@@ -9,7 +9,7 @@ from finances import kpis
 
 
 
-def run_business_case(working_module, params): 
+def run_business_case(working_module, params, return_details=False): 
     """
     Runs all business cases by passing the parameter dictionary into the functions
 
@@ -18,10 +18,10 @@ def run_business_case(working_module, params):
     """
 
     # step 1: Timeline construction
-    timelines.construct_calendar_year_list(**params)
-    timelines.construct_business_case_year_list(**params)
-    timelines.construct_operations_years_list(**params)
-    timelines.construct_decommissioning_years_list(**params)
+    calendar_years = timelines.construct_calendar_year_list(**params)
+    business_case_years = timelines.construct_business_case_year_list(**params)
+    operational_years = timelines.construct_operations_years_list(**params)
+    decommissioning_years = timelines.construct_decommissioning_years_list(**params)
 
     # step 2: Set up construction, operation and decommissioning phases
     df_construction_phase = working_module.construction_phase(**params)
@@ -40,7 +40,7 @@ def run_business_case(working_module, params):
                                                           df_taxes_and_profits_part2,
                                                           **params)
 
-    reserves_equity.project_reserves(**params)
+    df_project_reserves = reserves_equity.project_reserves(**params)
     df_equity_funding = reserves_equity.equity_funding(df_decommissioning_phase,
                                                        df_debt_and_loan_part2,
                                                        df_construction_phase,
@@ -52,13 +52,21 @@ def run_business_case(working_module, params):
                                                                    df_decommissioning_phase,
                                                                    df_equity_funding,
                                                                    **params)
-    cashflows.cumulative_equity_and_debt_cashflows(df_equity_funding,
-                                                   df_debt_and_loan_part1,
-                                                   **params)
+    df_cumulative_equity_and_debt_cashflows = cashflows.cumulative_equity_and_debt_cashflows(df_equity_funding,
+                                                                                             df_debt_and_loan_part1,
+                                                                                             **params)
 
     # step 5: Levelized costs
-    working_module.discounted_cashflows_for_levelized_cost(**params)
-    df_levelized_cost_and_revenues = working_module.levelized_cost_and_revenues(**params)
+    df_discounted_cashflows_for_levelized_cost = working_module.discounted_cashflows_for_levelized_cost(
+        df_construction_phase,
+        df_operational_phase,
+        df_decommissioning_phase,
+        df_taxes_and_profits_part2,
+        df_project_reserves,
+        **params)
+    df_levelized_cost_and_revenues = working_module.levelized_cost_and_revenues(
+        df_discounted_cashflows_for_levelized_cost,
+        **params)
     
     # step 5: KPIs
     project_kpi_df = kpis.project_kpi(df_present_value_cashflows,
@@ -70,6 +78,30 @@ def run_business_case(working_module, params):
                                     **params)
     output_kpi_df = kpis.output_kpi(df_levelized_cost_and_revenues,
                                     **params)
+
+
+    if return_details == True:
+        details = {
+            "calendar_years": calendar_years,
+            "business_case_years": business_case_years,
+            "operational_years": operational_years,
+            "decommissioning_years": decommissioning_years,
+            "construction_phase": df_construction_phase,
+            "operational_phase": df_operational_phase,
+            "decommissioning_phase": df_decommissioning_phase,
+            "taxes_and_profits_part1": df_taxes_and_profits_part1,
+            "debt_and_loan_part1": df_debt_and_loan_part1,
+            "taxes_and_profits_part2": df_taxes_and_profits_part2,
+            "debt_and_loan_part2": df_debt_and_loan_part2,
+            "project_reserves": df_project_reserves,
+            "equity_funding": df_equity_funding,
+            "present_value_cashflows": df_present_value_cashflows,
+            "cumulative_equity_debt": df_cumulative_equity_and_debt_cashflows,
+            "discounted_cashflows_for_levelized_cost": df_discounted_cashflows_for_levelized_cost,
+            "levelized_cost_and_revenues": df_levelized_cost_and_revenues,
+        }
+
+        return project_kpi_df, equity_kpi_df, output_kpi_df, details
 
     return project_kpi_df, equity_kpi_df, output_kpi_df
 
