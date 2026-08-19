@@ -367,4 +367,11 @@ owf_parameters = {
     # Technology specific
     'revenues_to_electrolyser': owf_revenues_to_electrolyser,
     'revenues_to_market': owf_revenues_to_market,
+
+    # Additional parameters required to generalize functions
+    # But not required for the sensitivity analysis
+    "depreciation": owf_depreciation,
+    "annuity_loan": owf_annuity_loan,
+    "construction_years_list": construction_years_list,
+    "contingency_percentage": owf_contingency,
 }
