@@ -5,13 +5,14 @@ import pandas as pd
 import numpy as np
 import numpy_financial as npf
 from decimal import Decimal, ROUND_HALF_UP
-import h5py
+import pickle
+from pathlib import Path
 
 #Loading Excel files takes quite some time. In order to save time the needed dataframes are stored in H5 format.
 #If you want to load new Excel input data, please change the 'no' into 'yes'.
 
 #Do you want do enter new Excel input data?
-answer = 'no'
+answer = 'yes'
 
 if answer == 'yes':
 
@@ -81,7 +82,7 @@ if answer == 'yes':
     #create wind profile dataframes for pessimistic, most likely and optimistic scenarios for every location
     df_wind_profiles_HUBN = pd.concat([df_pessimistic_windprofile_file['CF_Wind_HUBN'],df_mostlikely_windprofile_file['CF_Wind_HUBN'],df_optimistic_windprofile_file['CF_Wind_HUBN']],axis=1)
     df_wind_profiles_HUBN.columns = case_titles
-    df_wind_profiles_HUBE = pd.concat([df_pessimistic_windprofile_file['CF_Wind_HUBN'],df_mostlikely_windprofile_file['CF_Wind_HUBN'],df_optimistic_windprofile_file['CF_Wind_HUBN']],axis=1)
+    df_wind_profiles_HUBE = pd.concat([df_pessimistic_windprofile_file['CF_Wind_HUBN'],df_mostlikely_windprofile_file['CF_Wind_HUBN'],df_optimistic_windprofile_file['CF_Wind_HUBN']],axis=1)   # SHOULDNT THIS BE HUBE???
     df_wind_profiles_HUBE.columns = case_titles
     df_wind_profiles_HUBW = pd.concat([df_pessimistic_windprofile_file['CF_Wind_HUBW'],df_mostlikely_windprofile_file['CF_Wind_HUBW'],df_optimistic_windprofile_file['CF_Wind_HUBW']],axis=1)
     df_wind_profiles_HUBW.columns = case_titles
@@ -131,7 +132,7 @@ if answer == 'yes':
     CF_ATR_profiles_2050 = create_PesExpOpt_dataframe_hourlydata(pessimistic_price_profile_file_2050, mostlikely_price_profile_file_2050, optimistic_price_profile_file_2050, 'Hourly H2 Balance NED','Hourly_Annual_H2production_ATR_NED')
 
     #Overwrite data in HDFstore files
-    with pd.HDFStore('profiles.h5') as store:
+    with pd.HDFStore('profiles_old.h5') as store:
         store.put('electricity_price_profiles_2030', electricity_price_profiles_2030)
         store.put('electricity_price_profiles_2040', electricity_price_profiles_2040)
         store.put('electricity_price_profiles_2050', electricity_price_profiles_2050)
@@ -152,7 +153,7 @@ if answer == 'yes':
         store.put('df_wind_profiles_HUBW', df_wind_profiles_HUBW)
         store.put('df_solar_profiles_NED', df_solar_profiles_NED)
 else:
-    with pd.HDFStore('profiles.h5') as store:
+    with pd.HDFStore('profiles_old.h5') as store:
         electricity_price_profiles_2030 = store['electricity_price_profiles_2030']
         electricity_price_profiles_2040 = store['electricity_price_profiles_2040']
         electricity_price_profiles_2050 = store['electricity_price_profiles_2050']
