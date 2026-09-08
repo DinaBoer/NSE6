@@ -81,7 +81,8 @@ def clean_label(text):
     text = text.replace("_", " ")
     text = text.capitalize()
     text = text.replace("Capex", "CAPEX").replace("Opex", "OPEX")
-    text = text.replace("Ppa", "PPA").replace("Hwi", "HWI").replace("H2", "H₂").replace("ppa", "PPA")
+    text = text.replace("Ppa", "PPA").replace("Hwi", "HWI").replace("ppa", "PPA")
+    text = text.replace("H2", "H₂").replace("h2", "H₂")
     return text
 
 
@@ -97,6 +98,7 @@ def plot_scenario_breakdown(df_master, unit_label='€/MWh (levelized)'):
         'CAPEX': 'blue', 'OPEX': 'orange', 'Purchase electricity PPA': 'yellow',
         'Purchase electricity grid': 'gold', 'Electricity grid connection': 'mediumorchid',
         'H₂ storage costs': 'burlywood', 'Stack replacement': 'lightblue', 
+        'Entry tariff H₂ network': "#F894A8", 'Electricity tax': "#9877D6",
         'Decommissioning': '#FF1493', 'Interest costs': 'purple', 'Contingency': 'brown',
         'Tax expenses': 'grey', 
         'H₂ revenues': 'green', 'HWI revenues': 'lightgreen',  
