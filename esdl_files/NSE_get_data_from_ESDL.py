@@ -6,6 +6,7 @@ import numpy as np
 import numpy_financial as npf
 from decimal import Decimal, ROUND_HALF_UP
 import pickle
+from pathlib import Path
 
 ########## Set up energy system handler
 
@@ -13,8 +14,9 @@ import pickle
 esh = EnergySystemHandler()
 
 # CHOOSE FILE CORRESPONDING TO SCENARIO!
-file_name = "TNVDW_cost_single_units_v1_most_likely_scenario.esdl"
-esh.load_file(file_name) #load here the file created in the mapeditor
+base_dir = Path(__file__).resolve().parent.parent
+file_name = base_dir/'esdl_files'/"TNVDW_cost_single_units_v1_most_likely_scenario.esdl"
+esh.load_file(str(file_name)) #load here the file created in the mapeditor
 
 energy_system = esh.get_energy_system()
 instance_list = energy_system.instance
@@ -23,13 +25,13 @@ my_instance = instance_list[0]
 # CHOOSE SCENARIO HERE
 
 # the scenario is automatically chosen based on the file name!
-if "most_likely" in file_name:
+if "most_likely" in str(file_name):
     drop_scenarios = ['optimistic','pessimistic']
     current_scenario = ['most_likely']
-elif "optimistic" in file_name:
+elif "optimistic" in str(file_name):
     drop_scenarios = ['most_likely','pessimistic']
     current_scenario = ['optimistic']
-elif "pessimistic" in file_name:
+elif "pessimistic" in str(file_name):
     drop_scenarios = ['optimistic','most_likely']
     current_scenario = ['pessimistic']
 else:

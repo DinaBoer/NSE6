@@ -97,11 +97,14 @@ def equity_funding(df_decommissioning_phase,
     contingency_injection = df_reserves.loc['contingency_injection']
     total_cashflow_decommissioning = df_decommissioning.loc['total_cashflow_decommissioning']
     cash_after_debt_service = df_debt_and_loan.loc['cash_after_debt_service']
-    capex = df_construction.loc['capex']
+    total_cashflow_investment = df_construction.loc['total_cashflow_investment']
     contingency_reserve_to_dividents = df_reserves.loc['contingency_reserve_to_dividents']
 
     # 6. Calculate equity injection
-    equity_injection = contingency_injection + (capex *(1-loan_percentage)) + total_cashflow_decommissioning
+    equity_injection = (contingency_injection 
+                        + (total_cashflow_investment *(1-loan_percentage)) 
+                        + total_cashflow_decommissioning)
+    
     df_equity_funding.loc['equity_injection'] = equity_injection
 
     # 7. Calculate dividents results 

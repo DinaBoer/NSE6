@@ -1,6 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
-from NSE_get_data_from_ESDL import *
-from NG_input_data import *
+from ESDL.NSE_get_data_from_ESDL import *
+from assets.OT_input_data import *
 
 
 def ng_run_all_functions(capex_h2_station_variable,

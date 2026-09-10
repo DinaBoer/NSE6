@@ -8,9 +8,11 @@ import numpy as np
 import numpy_financial as npf
 from decimal import Decimal, ROUND_HALF_UP
 import pickle
+from pathlib import Path
 
 # Load pickle file from 'NSE_get_data_from_ESDL'
-filename = 'NSE_get_data_from_ESDL.pkl'
+base_dir = Path(__file__).resolve().parent.parent
+filename = base_dir/'esdl_files'/'NSE_get_data_from_ESDL.pkl'
 with open(filename, 'rb') as f:
     variables = pickle.load(f)
 

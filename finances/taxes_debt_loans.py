@@ -18,25 +18,25 @@ def taxes_and_profits_part1(df_operational_phase,**kwargs):
     ''' This function creates a dataframe that contains all cashflows for taxes & profits
         It consists of two parts, as it is dependent on the debt and loan calculations'''
     
-    # 1. Get the parameters we need
-    capex = kwargs['capex']
-    depreciation = kwargs['depreciation']
-
-    # 2. Get the timelines
+    # 1. Get the timelines
     calendar_years = construct_calendar_year_list(**kwargs)
     operational_years = construct_operations_years_list(**kwargs)
 
-    # 3. Get the results from construction and operational phases
+    # 2. Get the results from construction and operational phases
     df_operations = df_operational_phase
     ebitda = df_operations.loc['net_cashflow_operations']
 
-    # 4. Construct df
+    # 3. Construct df
     row_names = ['depreciation', 'ebit']
     df_taxes_profits = pd.DataFrame(0.0, index=row_names, columns=calendar_years)
     df_taxes_profits.columns.name = "taxes_and_profits"
     
-    # 5. Calculate depreciation
-    yearly_depreciation = capex/depreciation
+    # 4. Calculate depreciation
+    if 'yearly_depreciation' in kwargs:
+        yearly_depreciation = kwargs['yearly_depreciation']
+
+    else: 
+        yearly_depreciation = kwargs['capex']/kwargs['depreciation']
 
     df_taxes_profits.loc['depreciation'] = np.where(
         df_taxes_profits.columns.isin(operational_years), 
@@ -134,6 +134,9 @@ def taxes_and_profits_part2(df_operational_phase,
     
     # 1. Get the parameters we need
     income_tax_rate = kwargs['income_tax_rate']
+    # check if tax savings are allowed, based on whether it is in the parameter list
+    # defaults to False for bc that do not have the parameter
+    allow_tax_savings = kwargs.get('allow_tax_savings',False)
 
     # 2. Get the dataframes constructed in the previous steps
     df_taxes_profits = df_taxes_and_profits_part1.copy()
@@ -146,10 +149,16 @@ def taxes_and_profits_part2(df_operational_phase,
     df_taxes_profits.loc['ebt'] = df_taxes_profits.loc['ebit'] + interest_costs
 
     # 5. Calculate tax expenses
-    # If EBT>0, calculate tax, else 0
-
     ebt_series = df_taxes_profits.loc['ebt']
-    df_taxes_profits.loc['tax_expenses'] = np.where(ebt_series > 0, -ebt_series * income_tax_rate, 0.0)
+
+    if allow_tax_savings: 
+        # When calculating a bc with avoided cost instead of revenues
+        # negative delta EBT leads to avoided tax costs (because total taxable income is lower)
+        df_taxes_profits.loc['tax_expenses'] = -ebt_series * income_tax_rate
+
+    else:
+        # For a normal bc we use: if EBT>0, calculate tax, else 0
+        df_taxes_profits.loc['tax_expenses'] = np.where(ebt_series > 0, -ebt_series * income_tax_rate, 0.0)
 
     # 6. Calculate net profits by adding tax expenses to ebt
     df_taxes_profits.loc['net_profits'] = df_taxes_profits.loc['ebt'] + df_taxes_profits.loc['tax_expenses']
