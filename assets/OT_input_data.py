@@ -352,12 +352,12 @@ ot_hwi_costs = pd.DataFrame(columns=all_years)
 ot_hwi_costs.loc['ot_hwi_costs'] = np.array(df_yearly_data.loc['hwi_price']) * ot_h2_demand_kg / 1E6       # MEUR
 
 # CAPEX
-ot_capex_ng_boiler = df_yearly_data.loc['capex_ng_boiler', tender_year]
-ot_capex_h2_boiler = df_yearly_data.loc['capex_h2_boiler', tender_year]
+ot_capex_ng_boiler = df_yearly_data.loc['capex_ng_boiler', tender_year] 
+ot_capex_h2_boiler = df_yearly_data.loc['capex_h2_boiler', tender_year] 
 
 # calcualte loan costs
-ot_avoided_loan = ot_loan_percentage * df_yearly_data.loc['capex_ng_boiler',tender_year]
-ot_loan = ot_loan_percentage * (df_yearly_data.loc['capex_h2_boiler',tender_year] + ot_capex_h2_receiving_station + ot_capex_h2_pipeline)
+ot_avoided_loan = ot_loan_percentage * ot_capex_ng_boiler
+ot_loan = ot_loan_percentage * (ot_capex_h2_boiler + ot_capex_h2_receiving_station + ot_capex_h2_pipeline)
 
 # numpy financial calculates the annuity payment for the loan. Same as the PMT function in Excel (but slightly different arguments). See 'Cost data OWF' cell C9.
 ot_avoided_annuity_loan = -npf.pmt(ot_loan_interest_rate, ot_length_of_loan, ot_avoided_loan, fv=0, when='end')
@@ -395,6 +395,7 @@ ot_net_capex = (
 )
 
 ot_net_annuity_loan = ot_annuity_loan - ot_avoided_annuity_loan
+
 
 
 # =============================================================================
@@ -450,5 +451,24 @@ ot_parameters = {
 
 
 
+# =============================================================================
+# Dictionary to update parameters for sensitivity analysis
+# =============================================================================
+
+ot_parameter_update = {
+    "cost_keys": ["capex_h2_boiler",
+                  "capex_h2_receiving_station",
+                  "capex_h2_pipeline"],
+
+    "avoided_cost_keys": ["capex_ng_boiler"],
+
+    "depreciation_years": {
+        "capex_h2_boiler": ot_h2_boiler_depreciation,
+        "capex_h2_receiving_station": ot_h2_station_depreciation,
+        "capex_h2_pipeline": ot_h2_pipeline_depreciation},
+
+    "avoided_depreciation_years": {
+        "capex_ng_boiler": ot_ng_boiler_depreciation},
+}
 
 

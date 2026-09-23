@@ -80,9 +80,11 @@ def clean_label(text):
     """Formats raw database index strings into legend titles."""
     text = text.replace("_", " ")
     text = text.capitalize()
-    text = text.replace("Capex", "CAPEX").replace("Opex", "OPEX")
-    text = text.replace("Ppa", "PPA").replace("Hwi", "HWI").replace("ppa", "PPA")
+    text = text.replace("Capex", "CAPEX").replace("Opex", "OPEX").replace("capex", "CAPEX").replace("opex", "OPEX")
+    text = text.replace("Ppa", "PPA").replace("Hwi", "HWI").replace("ppa", "PPA").replace("hwi","HWI")
     text = text.replace("H2", "H₂").replace("h2", "H₂")
+    text = text.replace("Ng", "NG").replace(" ng", " NG")
+    text = text.replace("Eu", "EU")
     return text
 
 
@@ -103,7 +105,12 @@ def plot_scenario_breakdown(df_master, unit_label='€/MWh (levelized)'):
         'Tax expenses': 'grey', 
         'H₂ revenues': 'green', 'HWI revenues': 'lightgreen',  
         'Revenues PPA': 'green', 'Revenues market': 'lightgreen',
-        'Profits': 'limegreen', 'Unprofitable gap': 'red'
+        'Profits': 'limegreen', 'Unprofitable gap': 'red',
+        'CAPEX H₂ boiler': 'blue', 'CAPEX H₂ station': 'cyan', 'CAPEX H₂ pipeline': 'navy',
+        'H₂ boiler OPEX': 'orange', 'Network costs H₂': 'yellow', 'Purchasing H₂': 'gold',
+        'Purchasing HWI': 'burlywood', 'Avoided CAPEX NG boiler': 'mediumorchid',
+        'Avoided NG boiler OPEX': '#FF7F50', 'Network costs NG': 'olive',
+        'EU carbon permits': 'lightgreen', 'NG costs': 'green', 'NG tax costs': '#00A86B',
     }
     
     # 2. Extract the actual variables present in the DataFrame dynamically

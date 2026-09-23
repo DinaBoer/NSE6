@@ -3,12 +3,17 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from analysis.parameter_update_for_sensitivity import update_derived_parameters
 
-def run_oat_sensitivity(working_module, runner_module, base_parameters):
+def run_oat_sensitivity(working_module, runner_module, base_parameters, parameter_update=None):
     """
     Runs a One-At-A-Time sensitivity analysis over all parameters in our dictionary.
     Calcualtes the impact of -10% en +10% on the chosen KPI's.
     """
+
+    if parameter_update is None: 
+        parameter_update = {}
+
     # We don't need to do the sensitivity over the general business case data
     excluded_keys = [
         "duration_construction", 
@@ -18,8 +23,14 @@ def run_oat_sensitivity(working_module, runner_module, base_parameters):
         "depreciation",
         "annuity_loan",
         "construction_years_list",
-        "contingency_percentage"
+        "contingency_percentage", 
+        "yearly_depreciation",
+        "allow_tax_savings",
     ]
+
+    # Exclude aggregate "capex" when component-specific CAPEX parameters exist
+    if any("_capex" in key or "capex_" in key for key in base_parameters):
+        excluded_keys.append("capex")
 
     sensitivity_results = []
 
@@ -43,6 +54,12 @@ def run_oat_sensitivity(working_module, runner_module, base_parameters):
             
             # 2. Apply multiplication (works automatically for both numbers and DataFrames!)
             scen_params[key] = original_value * factor
+
+            # Update derived parameters if required
+            if parameter_update: 
+                scen_params = update_derived_parameters(
+                    scen_params, **parameter_update
+                )
             
             # 3. Run the business case using the runner
             project_kpi_df, equity_kpi_df, output_kpi_df = runner_module.run_business_case(working_module, scen_params)
@@ -137,7 +154,9 @@ def tornado_plot(df_sa, base_case, sa_type):
                         .replace("Capex", "CAPEX")
                         .replace("Opex", "OPEX")
                         .replace("Hwi", "HWI")
-                        .replace("Wacc", "WACC") for var in variables]
+                        .replace("Wacc", "WACC")
+                        .replace("h2", "H₂").replace("H2", "H₂")
+                        .replace("Ng", "NG") for var in variables]
 
     # Set y-axis labels
     ax.set_yticks(y_pos)
