@@ -56,14 +56,12 @@ def project_reserves(**kwargs):
         # Calculate divident payout (only in the last year of the timeline, i.e. after the project is finished)
         if x == last_year:
             available_balance = df_project_reserves.loc['contingency_reserve_balance',x]
+                     
+            # Payout of the full available balance
+            df_project_reserves.loc['contingency_reserve_to_dividents', x] = available_balance
 
-            if available_balance > 0:
-            
-                # Payout of the full available balance
-                df_project_reserves.loc['contingency_reserve_to_dividents', x] = available_balance
-
-                # After paying out the divident, the balance will go to 0
-                df_project_reserves.loc['contingency_reserve_balance', x] -= available_balance
+            # After paying out the divident, the balance will go to 0
+            df_project_reserves.loc['contingency_reserve_balance', x] -= available_balance
 
 
     return df_project_reserves

@@ -65,6 +65,7 @@ def debt_and_loan_part1(**kwargs):
     tender_year = kwargs['tender_year']
     annuity_loan = kwargs['annuity_loan']
     construction_years_list = kwargs['construction_years_list']
+    length_of_loan = kwargs['length_of_loan']
 
     # 2. Get the timelines
     calendar_years = construct_calendar_year_list(**kwargs)
@@ -84,7 +85,7 @@ def debt_and_loan_part1(**kwargs):
     yearly_drawdown = total_loan / len(construction_years)
 
     df_debt_and_loan.loc["drawdown"] = np.where(
-        df_debt_and_loan.columns.isin(construction_years_list),
+        df_debt_and_loan.columns.isin(construction_years),
         yearly_drawdown, 0.0
     )
 
@@ -96,22 +97,34 @@ def debt_and_loan_part1(**kwargs):
             df_debt_and_loan.loc['begin_of_year',x] = 0
         else:
             df_debt_and_loan.loc['begin_of_year',x] = df_debt_and_loan.loc['end_of_year',x-1]
-        
+
+        current_debt = df_debt_and_loan.loc['begin_of_year',x] + df_debt_and_loan.loc['drawdown',x]
+
         # repayment interest
-        if x in operational_years:
-            current_debt = df_debt_and_loan.loc['begin_of_year',x] + df_debt_and_loan.loc['drawdown',x]
+        if x in operational_years:          
 
             interest_payment = -current_debt * loan_interest_rate
             df_debt_and_loan.loc['repayment_interest',x] = interest_payment
     
         # repayment capital
+        # For standard debt (>0): repayment is negative, capped at -current_debt
+        # For net avoided debt (<0): repayment is positive, capped at -current_debt
         if x in operational_years:
 
-            # the min-function returns the lowest item, so min(5,10) will return 5
-            df_debt_and_loan.loc['repayment_capital',x] = -min(
-                    current_debt, 
-                    annuity_loan + interest_payment
-                    )
+            if total_loan >= 0: 
+                # standard loan: repayment (annuity_loan + interest_payment) is an outflow (-)
+                # the min-function returns the lowest item, so min(5,10) will return 5
+                df_debt_and_loan.loc['repayment_capital',x] = -min(
+                        current_debt, 
+                        annuity_loan + interest_payment
+                        )
+
+            else: 
+                # avoided loan: repayment (annuity_loan + interest_payment) can be an inflow (+) if avoided capex is higher than capex
+                df_debt_and_loan.loc['repayment_capital',x] = -max(
+                        current_debt, 
+                        annuity_loan + interest_payment
+                        )
        
         # end of year
         df_debt_and_loan.loc['end_of_year',x] = (
